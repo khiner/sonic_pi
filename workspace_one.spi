@@ -1,0 +1,15 @@
+# Welcome to Sonic Pi v2.0
+sample_name = :loop_amen_full
+
+loop do
+  duration = 0.008 * rrand_i(0,8)
+  start = rrand(0,1 - duration)
+  window = [start, start + duration]
+  sample sample_name, start: window.first, finish: window.last, release: rrand(0,0.8), attack: 0.005
+  rel_duration = duration * (sample_duration sample_name)
+  play chord(rrand(40,80).to_i, :m7), amp: 0.1, release: rel_duration * rrand(0.5,2)
+  sleep rel_duration
+
+  play 50, release: 0.1, cutoff: rrand(60, 120)
+  sleep rel_duration
+end

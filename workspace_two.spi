@@ -1,0 +1,60 @@
+# Welcome to Sonic Pi v2.0
+
+SEQUENCE = {
+  drum_heavy_kick:    '.--    .-   .  .    .---. .  .  ',
+  drum_snare_hard:    '            .  .    .    .  .  .',
+  drum_cymbal_closed: '.   .   . .   .   . . . .. .. . ',
+  melody:             'A CA DA CAFCA C AB ABD BCAF A CA',
+}
+
+def warp_melody(melody)
+  melody.split('').collect do |c|
+    n = c.next.next
+    n > 'G' ? 'A' : n
+  end.join
+end
+
+
+BEAT_LENGTH = 0.1
+
+beat = 0
+MEASURE = 1
+
+def find_samples(beat)
+  SEQUENCE.collect do |sample, pattern|
+    pattern[beat] != ' ' ? sample : nil
+  end.compact
+end
+
+def play_curr_note(*args)
+  note = SEQUENCE[:melody][beat]
+  play note, args if note != ' '
+end
+
+while true do
+    samples = find_samples(beat)
+    repeat = rrand(1,5).to_i
+    duration = BEAT_LENGTH / repeat
+
+    with_fx :reverb, mix: [0.2 * MEASURE, 1].min do
+      with_synth :tb303 do
+        play_curr_note release: 2
+      end if beat == 0
+    end
+
+    repeat.times do |i|
+      samples.each do |sample_to_play|
+        if sample_to_play == :melody
+          note = SEQUENCE[:melody][beat]
+          play note, release: duration / MEASURE.to_f  if note.strip.size > 0
+        elsif i == 0
+          sample sample_to_play, sustain: 0, release: duration / MEASURE.to_f
+        end
+      end
+      sleep BEAT_LENGTH / repeat
+    end
+
+    beat = (beat + 1) % 32
+    MEASURE = [(MEASURE + 1) % 5, 1].max if beat == 0
+    SEQUENCE[:melody] = warp_melody(SEQUENCE[:melody]) if beat == 0
+  end

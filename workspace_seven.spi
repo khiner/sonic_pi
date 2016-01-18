@@ -1,0 +1,68 @@
+in_thread do
+  bpm = 240
+  beats_per_measure = 4
+  beat_count = 0
+  fill_count = 0
+  num_repeats = 1
+  repeat_probability = 0.0
+
+  define :is_first_beat do
+    beat_count % beats_per_measure == 0
+  end
+
+  loop do
+    cue :tick
+    if is_first_beat
+      cue :first_beat
+      num_repeats = if rrand(0, 1) <= repeat_probability
+        2
+      else
+        1
+      end
+    end
+    sleep_time = (60.0 / bpm) / num_repeats
+    num_repeats.times do
+      cue :fill
+      fill_count += 1
+      sleep sleep_time
+    end
+    beat_count += 1
+  end
+end
+
+in_thread(name: :bass) do
+  i = 0
+  loop do
+    sync :fill
+    crd = [chord(:e4, :m7), chord(:b3, :m)].choose
+    note = crd.choose
+    use_synth :pretty_bell
+
+    if ((i += 1) / 16) % 2 == 0
+      play chord(:d, :m)
+    else
+      play chord(:b, :m)
+    end
+    use_synth :beep
+    play note, release: 0.10 * rrand_i(1, 4)
+    play crd.choose, release: 0.10 * rrand_i(1, 4)
+  end
+end
+
+in_thread(name: :drums) do
+  i = 0
+  loop do
+    sync :fill
+    next if (i += 1) < 16
+    sample :loop_mika, pitch: i.to_f / 100
+  end
+end
+
+in_thread(name: :kick) do
+  i = 0
+  loop do
+    sync :tick
+    sample :sn_dolf if i % 4 == 0
+    sample [:drum_cymbal_hard, :drum_cymbal_closed].choose if (i += 1) % 2 == 0
+  end
+end

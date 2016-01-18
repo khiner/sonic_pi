@@ -1,0 +1,31 @@
+# returns an array of sleep lengths that add up to 1 bar
+Impulse = Struct.new(:length, :amp, :release)
+
+def gen_impulses(n=4)
+  (1..n).collect do |i|
+    Impulse.new(1.0 / n, i / 4.0, 1 - i / (n + 1.0))
+  end
+end
+
+CHORDS = [[:c, :minor], [:f, :major], [:g, :minor]]
+
+def n
+  chord(*CHORDS.choose).choose
+end
+
+live_loop :main do
+  with_fx :bitcrusher do
+    gen_impulses.each do |impulse|
+      play n, amp: impulse.amp, release: impulse.release
+      sleep impulse.length
+    end
+  end
+end
+
+live_loop :drum do
+  use_synth :noise
+  gen_impulses(8).each do |impulse|
+    play 10000, amp: impulse.amp, release: impulse.release / 4
+    sleep impulse.length
+  end
+end

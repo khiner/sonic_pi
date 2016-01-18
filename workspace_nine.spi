@@ -1,0 +1,16 @@
+loop do
+  loop_num = 0
+  chords = [[:E3, :m13], [:D3, :major], [:B4, :minor]]
+
+  efx = [:flanger, :distortion, :krush]
+  fx = efx.choose
+  next_measure = loop_num % 16 == 0
+  crd = chords.choose if next_measure
+  fx = efx.choose if next_measure
+  s = play_pattern_timed chord(*crd), [rrand(0, 0.1), 0.02], attack: 0.003, release: rrand(0.05, 0.2)
+  play chord(*crd)
+  with_fx fx do
+    sample :sn_dub, finish: 0.1, rate: 1 + (loop_num % 16) / 16.to_f
+  end
+  loop_num += 1
+end

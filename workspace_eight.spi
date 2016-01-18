@@ -1,0 +1,55 @@
+MELODIES = [
+  'adcfbe',
+  'dbc',
+  'acdgabd',
+  'e',
+]
+
+RHYTHMS = {
+  drum_heavy_kick:    '. .',
+  drum_snare_soft:    '.    .',
+  drum_cymbal_closed: '. ..',
+  drum_cymbal_hard:   '  . .',
+}
+
+BEAT = 0
+
+def current_notes
+  MELODIES.collect do |melody|
+    note = melody[BEAT % melody.size]
+    if note == ' '
+      nil
+    elsif note == note.upcase
+      note + 's'
+    else
+      note
+    end
+  end.compact
+end
+
+def current_samples
+  RHYTHMS.collect do |sample, pattern|
+    pattern[BEAT % pattern.size] != ' ' ? sample : nil
+  end.compact
+end
+
+def sin(amp, freq, offset)
+  (1 + Math.sin(BEAT * freq)) * amp * 0.5 + offset
+end
+
+in_thread(name: :melody_cycle) do
+  loop do
+    puts current_notes
+    current_notes.each do |note|
+      play note + ['4', '4'].choose, release: sin(0.12, 0.045, 0.05)
+    end
+
+    current_samples.each do |samp|
+      sample samp, finish: sin(0.12, 0.025, 0.03) / rrand_i(1,8)
+    end
+
+    BEAT += 1
+    sleep 0.1
+  end
+
+end

@@ -1,0 +1,118 @@
+########### Performance section ############
+
+use_bpm 120
+humanize = 0.05
+beat_division = 2
+
+freeze = {
+  drum:     0,
+  sequence: 0,
+  global:   0,
+}
+global_loop_length = 16
+
+drum_fx = :none
+synth_fx = :wobble
+
+drum_samples = [
+  :drum_bass_soft,
+  :drum_snare_soft,
+  :drum_cymbal_closed,
+  :drum_cymbal_soft,
+]
+
+drum_beats = [
+  '.--..---.---..--',
+  '----.--------.---',
+  '.',
+  '----.-------.---',
+]
+
+drum_velocities = [
+  '9',
+  '9',
+  '1268',
+  '69',
+]
+
+synths = [
+  :beep,
+  :saw,
+]
+
+sequences = [
+  'cDgdf',
+  'cDgdf ',
+]
+
+note_lengths = [
+  '1352',
+]
+
+########### End Performance section ############
+
+
+define :access do |array, i|
+  array[(i % array.length) % global_loop_length]
+end
+
+define :freeze? do |key|
+  freeze[key] == 1 || freeze[:global] == 1
+end
+
+use_debug false
+
+live_loop :drum_ticker do
+  time_remainder = 1.0 / beat_division
+  drum_beats.each_with_index do |drum_beat, i|
+    label = i.to_s
+    random_time = rrand(0, humanize)
+    time_remainder -= random_time
+    sleep random_time
+    cue 'drum_trigger' + label
+  end
+  sleep time_remainder
+end
+
+live_loop :sequence_ticker do
+  time_remainder = 1.0 / beat_division
+  sequences.each_with_index do |sequence, i|
+    label = i.to_s
+    random_time = rrand(0, humanize)
+    time_remainder -= random_time
+    sleep random_time
+    cue 'sequence_trigger' + label
+  end
+  sleep time_remainder
+end
+
+drum_beats.each_with_index do |drum_beat, i|
+  label = i.to_s
+  live_loop 'drum_loop' + label do
+    with_fx drum_fx do
+      sync 'drum_trigger' + label
+      tick(label) unless freeze? :drum
+      tick('velocity' + label) unless freeze? :drum
+      sample drum_samples[i], amp: access(drum_velocities[i], look('velocity' + label)).to_f / 9.0 if access(drum_beat, look(label)) == '.'
+    end
+  end
+end
+
+sequences.each_with_index do |sequence, i|
+  label = i.to_s
+  note_length_label = 'note_length' + (i % note_lengths.length).to_s
+  live_loop 'sequence_loop' + label do
+    with_fx synth_fx do
+      sync 'sequence_trigger' + label
+      tick(label) unless freeze? :sequence
+      tick(note_length_label) unless freeze? :sequence
+      note = access(sequence, look(label))
+      next if note == ' '
+      note += 's' if note.upcase == note
+      with_synth synths[i] do
+        note_length = access(access(note_lengths, i), look(note_length_label)).to_f
+        play note, decay: note_length / 9.0, sustain_level: 0, amp: 0.7
+      end
+    end
+  end
+end
